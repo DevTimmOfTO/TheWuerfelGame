@@ -1,11 +1,11 @@
 # TheWuerfelGame
 A Program for my it school leason, xD
 
-# Funktionen
+## Funktionen
 - Kniffel, Kniffel, Kniffel
 - Statistik
 - Spielstand
 
-# Bugs/Fehler
+## Bugs/Fehler
 
 Möchten Sie einen Fehler melden, bitte unter https://github.com/TheBlokker/TheWuerfelGame/issues
