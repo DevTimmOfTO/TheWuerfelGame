@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>1899.12.30 00:00:00.000.241,H:\Informatik\Delphi\Programme\TheWürfelGame\Server\MainServer.dfm=H:\Embarcadero\Studio\Projekte\Unit3.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.570,=H:\Embarcadero\Studio\Projekte\Unit3.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.241,H:\Informatik\Delphi\Programme\TheWürfelGame\Server\MainServer.pas=H:\Embarcadero\Studio\Projekte\Unit3.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.101,H:\Informatik\Delphi\Programme\TheWürfelGame\Server\TheWuerfelGame_Server.dproj=H:\Embarcadero\Studio\Projekte\Project1.dproj</Transaction>
+  </Transactions>
+</BorlandProject>

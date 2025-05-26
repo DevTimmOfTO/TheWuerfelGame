@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>1899.12.30 00:00:00.000.550,H:\Embarcadero\Studio\Projekte\ProjectGroup1.groupproj=H:\Informatik\Delphi\Programme\TheWürfelGame\ProjectGroup1.groupproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.553,H:\Informatik\Delphi\Programme\TheWürfelGame\ProjectGroup1.groupproj=H:\Informatik\Delphi\Programme\TheWürfelGame\TheWuerfelGame.groupproj</Transaction>
+  </Transactions>
+	<Default.Personality>
+		<Projects ActiveProject="C:\Users\TheBlokker\OneDrive\A26\Informatik\Delphi\Programme\TheWürfelGame\Client\TheWuerfelGame_Client.dproj"/>
+	</Default.Personality>
+</BorlandProject>

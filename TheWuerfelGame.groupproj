@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{707EC8D3-7BCA-4C9B-A859-1B740244B4A4}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Client\TheWuerfelGame_Client.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Server\TheWuerfelGame_Server.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="TheWuerfelGame_Client">
+        <MSBuild Projects="Client\TheWuerfelGame_Client.dproj"/>
+    </Target>
+    <Target Name="TheWuerfelGame_Client:Clean">
+        <MSBuild Projects="Client\TheWuerfelGame_Client.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TheWuerfelGame_Client:Make">
+        <MSBuild Projects="Client\TheWuerfelGame_Client.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TheWuerfelGame_Server">
+        <MSBuild Projects="Server\TheWuerfelGame_Server.dproj"/>
+    </Target>
+    <Target Name="TheWuerfelGame_Server:Clean">
+        <MSBuild Projects="Server\TheWuerfelGame_Server.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TheWuerfelGame_Server:Make">
+        <MSBuild Projects="Server\TheWuerfelGame_Server.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="TheWuerfelGame_Client;TheWuerfelGame_Server"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="TheWuerfelGame_Client:Clean;TheWuerfelGame_Server:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="TheWuerfelGame_Client:Make;TheWuerfelGame_Server:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

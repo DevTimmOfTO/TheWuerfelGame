@@ -1,0 +1,50 @@
+unit MainServer;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, IdBaseComponent,
+  IdComponent, IdCustomTCPServer, IdTCPServer, IdContext;
+
+type
+  TForm3 = class(TForm)
+    Button1: TButton;
+    Memo1: TMemo;
+    IdTCPServer1: TIdTCPServer;
+    procedure Button1Click(Sender: TObject);
+    procedure IdTCPServer1Execute(AContext: TIdContext);
+    procedure FormCreate(Sender: TObject);
+  private
+    { Private-Deklarationen }
+  public
+    { Public-Deklarationen }
+  end;
+
+var
+  Form3: TForm3;
+
+implementation
+
+{$R *.dfm}
+
+procedure TForm3.Button1Click(Sender: TObject);
+
+begin
+//
+
+end;
+
+
+
+
+
+procedure TForm3.IdTCPServer1Execute(AContext: TIdContext);
+var
+  InBoxData : string;
+begin
+  InBoxData := AContext.Connection.IOHandler.ReadLn;
+   AContext.Connection.IOHandler.WriteLn('Recive: ' + InBoxData);
+end;
+
+end.

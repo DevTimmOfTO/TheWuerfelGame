@@ -1,0 +1,150 @@
+object Form2: TForm2
+  Left = 0
+  Top = 0
+  Caption = 'Form2'
+  ClientHeight = 635
+  ClientWidth = 719
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -12
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  OnCreate = FormCreate
+  TextHeight = 15
+  object Image1: TImage
+    Left = 21
+    Top = 32
+    Width = 105
+    Height = 105
+  end
+  object Image2: TImage
+    Left = 157
+    Top = 32
+    Width = 105
+    Height = 105
+  end
+  object Image3: TImage
+    Left = 293
+    Top = 32
+    Width = 105
+    Height = 105
+  end
+  object Image4: TImage
+    Left = 565
+    Top = 32
+    Width = 105
+    Height = 105
+  end
+  object Image5: TImage
+    Left = 429
+    Top = 32
+    Width = 105
+    Height = 105
+  end
+  object Label3: TLabel
+    Left = 208
+    Top = 196
+    Width = 74
+    Height = 15
+    Caption = '0/3 Versuchen'
+  end
+  object GroupBox1: TGroupBox
+    Left = 8
+    Top = 329
+    Width = 185
+    Height = 105
+    Caption = 'Punktestand'
+    TabOrder = 0
+    object Label1: TLabel
+      Left = 23
+      Top = 29
+      Width = 49
+      Height = 15
+      Caption = 'Spieler A:'
+    end
+    object Label2: TLabel
+      Left = 112
+      Top = 29
+      Width = 6
+      Height = 15
+      Caption = '0'
+    end
+  end
+  object Button1: TButton
+    Left = 21
+    Top = 192
+    Width = 172
+    Height = 25
+    Caption = 'W'#252'rfeln'
+    TabOrder = 1
+  end
+  object Button2: TButton
+    Left = 21
+    Top = 240
+    Width = 172
+    Height = 25
+    Caption = 'Optionen'
+    TabOrder = 2
+  end
+  object CheckBox1: TCheckBox
+    Left = 21
+    Top = 143
+    Width = 105
+    Height = 17
+    Caption = 'Diesen behalten'
+    TabOrder = 3
+  end
+  object CheckBox2: TCheckBox
+    Left = 157
+    Top = 143
+    Width = 105
+    Height = 17
+    Caption = 'Diesen behalten'
+    TabOrder = 4
+  end
+  object CheckBox3: TCheckBox
+    Left = 293
+    Top = 143
+    Width = 105
+    Height = 17
+    Caption = 'Diesen behalten'
+    TabOrder = 5
+  end
+  object CheckBox4: TCheckBox
+    Left = 429
+    Top = 143
+    Width = 105
+    Height = 17
+    Caption = 'Diesen behalten'
+    TabOrder = 6
+  end
+  object CheckBox5: TCheckBox
+    Left = 565
+    Top = 143
+    Width = 105
+    Height = 17
+    Caption = 'Diesen behalten'
+    TabOrder = 7
+  end
+  object Button3: TButton
+    Left = 21
+    Top = 288
+    Width = 172
+    Height = 25
+    Caption = 'Wisschaftliche Infos'
+    TabOrder = 8
+  end
+  object StringGrid1: TStringGrid
+    Left = 391
+    Top = 208
+    Width = 226
+    Height = 385
+    ColCount = 3
+    DoubleBuffered = True
+    RowCount = 10
+    ParentDoubleBuffered = False
+    TabOrder = 9
+    StyleName = 'Windows10'
+  end
+end

@@ -1,0 +1,142 @@
+unit Statistics;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics, System.Generics.Collections,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, VclTee.TeeGDIPlus, VCLTee.TeEngine,
+  VCLTee.Series, Vcl.ExtCtrls, VCLTee.TeeProcs, VCLTee.Chart, Vcl.StdCtrls;
+
+type
+  TForm3 = class(TForm)
+    GroupBox1: TGroupBox;
+    GroupBox2: TGroupBox;
+    Label1: TLabel;
+    Label2: TLabel;
+    Label3: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    Edit1: TEdit;
+    Edit2: TEdit;
+    Edit3: TEdit;
+    Edit4: TEdit;
+    Edit5: TEdit;
+    Edit6: TEdit;
+    Edit7: TEdit;
+    Edit8: TEdit;
+    Edit9: TEdit;
+    Edit10: TEdit;
+    Edit11: TEdit;
+    Edit12: TEdit;
+    Label7: TLabel;
+    Label8: TLabel;
+    Label9: TLabel;
+    Label10: TLabel;
+    Label11: TLabel;
+    Label12: TLabel;
+    Label13: TLabel;
+    Label14: TLabel;
+    Edit13: TEdit;
+    Edit14: TEdit;
+    Chart1: TChart;
+    Series2: TPieSeries;
+    procedure UpdateStatistics;
+  private
+    { Private-Deklarationen }
+  public
+    { Public-Deklarationen }
+  end;
+
+var
+  Form3: TForm3;
+implementation
+
+{$R *.dfm}
+
+uses MainPlayer1;
+
+procedure TForm3.UpdateStatistics;
+var
+  GesamtListe: TList<Integer>;
+  Häufigkeit: array[1..6] of Integer;
+  Relativ: array[1..6] of Double;
+  i, Wert, GesamtAnzahl: Integer;
+  MaxHäufigkeit, MinHäufigkeit, Häufigster, Seltenster: Integer;
+begin
+  // Load Data
+  GesamtListe := TList<Integer>.Create;
+  try
+    // Alle Arrays zusammenführen
+    for Wert in Würfel1 do GesamtListe.Add(Wert);
+    for Wert in Würfel2 do GesamtListe.Add(Wert);
+    for Wert in Würfel3 do GesamtListe.Add(Wert);
+    for Wert in Würfel4 do GesamtListe.Add(Wert);
+    for Wert in Würfel5 do GesamtListe.Add(Wert);
+
+    // Initialisieren
+    FillChar(Häufigkeit, SizeOf(Häufigkeit), 0);
+
+    // Absolute Häufigkeit zählen
+    for Wert in GesamtListe do
+      if (Wert >= 1) and (Wert <= 6) then
+        Inc(Häufigkeit[Wert]);
+
+    // Gesamtanzahl
+    GesamtAnzahl := GesamtListe.Count;
+
+    // Relative Häufigkeit berechnen
+    for i := 1 to 6 do
+      if GesamtAnzahl > 0 then
+        Relativ[i] := Häufigkeit[i] / GesamtAnzahl
+      else
+        Relativ[i] := 0;
+
+    // Häufigster und seltenster Wert finden
+    MaxHäufigkeit := -1;
+    MinHäufigkeit := MaxInt;
+    for i := 1 to 6 do
+    begin
+      if Häufigkeit[i] > MaxHäufigkeit then
+      begin
+        MaxHäufigkeit := Häufigkeit[i];
+        Häufigster := i;
+      end;
+      if (Häufigkeit[i] < MinHäufigkeit) and (Häufigkeit[i] > 0) then
+      begin
+        MinHäufigkeit := Häufigkeit[i];
+        Seltenster := i;
+      end;
+    end;
+
+    // GUI: Absolute Häufigkeit eintragen
+    Edit7.Text := IntToStr(Häufigkeit[1]);
+    Edit10.Text := IntToStr(Häufigkeit[2]);
+    Edit8.Text := IntToStr(Häufigkeit[3]);
+    Edit11.Text := IntToStr(Häufigkeit[4]);
+    Edit9.Text := IntToStr(Häufigkeit[5]);
+    Edit12.Text := IntToStr(Häufigkeit[6]);
+
+    // GUI: Relative Häufigkeit eintragen
+    Edit1.Text := Format('%.2f %%', [Relativ[1] * 100]);
+    Edit4.Text := Format('%.2f %%', [Relativ[2] * 100]);
+    Edit2.Text := Format('%.2f %%', [Relativ[3] * 100]);
+    Edit5.Text := Format('%.2f %%', [Relativ[4] * 100]);
+    Edit3.Text := Format('%.2f %%', [Relativ[5] * 100]);
+    Edit6.Text := Format('%.2f %%', [Relativ[6] * 100]);
+
+    // Häufigste/wenigste Werte eintragen
+    Edit13.Text := Format('%d (%d×)', [Häufigster, MaxHäufigkeit]);
+    Edit14.Text := Format('%d (%d×)', [Seltenster, MinHäufigkeit]);
+
+    // Kreisdiagramm (Series2) aktualisieren
+    Series2.Clear;
+    for i := 1 to 6 do
+      if Häufigkeit[i] > 0 then
+        Series2.Add(Häufigkeit[i], IntToStr(i), clTeeColor); // Automatische Farbe;
+  finally
+    GesamtListe.Free;
+  end;
+end;
+
+end.

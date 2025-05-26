@@ -1,0 +1,1014 @@
+﻿unit MainPlayer1;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Grids,
+  System.ImageList, Vcl.ImgList, System.Generics.Collections;
+// Hinzugefügt für TList<Integer> und TDictionary
+
+type
+  TForm2 = class(TForm)
+    Image1: TImage;
+    Image2: TImage;
+    Image3: TImage;
+    Image4: TImage;
+    Image5: TImage;
+    Button1: TButton; // Würfeln
+    CheckBox1: TCheckBox;
+    CheckBox2: TCheckBox;
+    CheckBox3: TCheckBox;
+    CheckBox4: TCheckBox;
+    CheckBox5: TCheckBox;
+    Label3: TLabel;
+    Button3: TButton; // Dein Statistik-Button
+    GroupBox2: TGroupBox;
+    StringGrid1: TStringGrid;
+    Button4: TButton; // Übernehmen
+    Button5: TButton; // Unbenutzt in diesem Beispiel
+    ImageList1: TImageList;
+    Button2: TButton;
+    procedure FormCreate(Sender: TObject);
+    procedure StringGrid1DrawCell(Sender: TObject; ACol, ARow: LongInt;
+      Rect: TRect; State: TGridDrawState);
+    procedure Button1Click(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
+    procedure Button4Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
+    procedure Button5Click(Sender: TObject);
+  private
+    FDice: array [1 .. 5] of Integer; // Aktuelle Würfelwerte
+    FCurrentRound: Integer; // Aktuelle Spielrunde (1, 2 oder 3)
+    FAttemptsLeft: Integer; // Verbleibende Würfelversuche pro Zug (3 am Anfang)
+
+    // Speichert, ob eine Kategorie in einer bestimmten Runde bereits gewertet wurde
+    // [Zeilenindex, Rundenindex (1, 2 oder 3)]
+    FScoredCategories: array [0 .. 16, 1 .. 3] of Boolean;
+    // Angepasst für 3 Runden
+
+    // Konstanten für die Zeilen- und Spaltenindizes im StringGrid
+  const
+    COL_CATEGORY_NAMES = 0; // Spalte für Kategorienamen
+    COL_ROUND1 = 1; // Spalte für Runde 1
+    COL_ROUND2 = 2; // Spalte für Runde 2
+    COL_ROUND3 = 3; // Spalte für Runde 3
+
+    ROW_ONES = 1;
+    ROW_TWOS = 2;
+    ROW_THREES = 3;
+    ROW_FOURS = 4;
+    ROW_FIVES = 5;
+    ROW_SIXES = 6;
+    ROW_SUBTOTAL = 7;
+    ROW_BONUS = 8;
+    ROW_THREE_OF_A_KIND = 9;
+    ROW_FOUR_OF_A_KIND = 10;
+    ROW_FULL_HOUSE = 11;
+    ROW_SMALL_STRAIGHT = 12;
+    ROW_LARGE_STRAIGHT = 13;
+    ROW_KNIFFEL = 14;
+    ROW_CHANCE = 15;
+    ROW_TOTAL = 16;
+
+    // Private Prozeduren und Funktionen
+    procedure UpdateDiceImages;
+    procedure CalculateAndDisplayPotentialScores;
+    function CalculateScoreForCategory(CategoryRow: Integer;
+      const ADice: array of Integer): Integer;
+    procedure UpdateTotals;
+    procedure ClearPotentialScoresInRound(ARoundCol: Integer);
+    procedure StartNewTurn; // Startet einen neuen Zug (neue Würfelversuche)
+    procedure CheckForEndOfRound; // Prüft, ob die Runde beendet ist
+    // New procedure for dice simulation
+    procedure SimulateDiceRollsForStatistics(NumSimulations: Integer);
+
+
+    // Hilfsfunktionen für die Würfelanalyse
+    function GetDiceCounts(const ADice: array of Integer)
+      : TDictionary<Integer, Integer>; // Geändert zu TDictionary
+    function HasNOfAKind(const ADiceCounts: TDictionary<Integer, Integer>;
+      N: Integer): Boolean; // Parameter angepasst
+    function IsSmallStraight(const ADice: array of Integer): Boolean;
+    function IsLargeStraight(const ADice: array of Integer): Boolean;
+    function IsFullHouse(const ADiceCounts: TDictionary<Integer, Integer>)
+      : Boolean; // Parameter angepasst
+    function IsColumnFull(Col: Integer): Boolean;
+  public
+    { Public-Deklarationen }
+  end;
+
+var
+  Form2: TForm2;
+
+implementation
+
+{$R *.dfm}
+
+uses UnicodeEmoji, Statistics; // Behalte deine bestehenden Uses-Klauseln
+
+// --- Form-Ereignisse ---
+
+procedure TForm2.SimulateDiceRollsForStatistics(NumSimulations: Integer);
+var
+  i, j: Integer;
+  SimulatedDiceValues: array of Integer;
+  SingleRoll: Integer;
+begin
+  // Set the length of the dynamic array to store all simulated dice values
+  SetLength(SimulatedDiceValues, NumSimulations * 5);
+  // 5 dice per roll * NumSimulations
+
+  // Perform the simulations
+  for i := 0 to NumSimulations - 1 do
+  begin
+    for j := 0 to 4 do // Roll 5 dice for each simulation
+    begin
+      SingleRoll := Random(6) + 1; // Generates a random number between 1 and 6
+      SimulatedDiceValues[i * 5 + j] := SingleRoll;
+    end;
+  end;
+
+  // Now, pass these simulated values to the statistics form
+  if not Assigned(Form3) then
+    Form3 := TForm3.Create(Application);
+
+  Form3.UpdateStatistics(SimulatedDiceValues);
+  Form3.ShowModal;
+
+  // Free the dynamic array memory after use (optional, as it goes out of scope)
+  SetLength(SimulatedDiceValues, 0);
+end;
+
+
+// Die CompareIntegers-Funktion ist nicht mehr notwendig, da wir TList<Integer> oder dynamische Arrays mit Sort verwenden.
+
+procedure TForm2.FormCreate(Sender: TObject);
+var
+  R, C: Integer; // I ist hier nicht mehr notwendig
+begin
+  Randomize; // Initialisiert den Zufallszahlengenerator
+  FCurrentRound := 1; // Starte in Runde 1
+
+  // Initialisiere das Array für gewertete Kategorien
+  for R := Low(FScoredCategories) to High(FScoredCategories) do
+    for C := Low(FScoredCategories[R]) to High(FScoredCategories[R]) do
+      FScoredCategories[R, C] := False;
+
+  // StringGrid-Setup (dein bestehender Code)
+  StringGrid1.ColCount := 4;
+  // 0: Kategorienamen, 1: Runde 1, 2: Runde 2, 3: Runde 3
+  StringGrid1.RowCount := 17; // 0: Header, 1-16: Kategorien
+  StringGrid1.FixedCols := 1;
+  StringGrid1.FixedRows := 1;
+
+  // Setze die Header und Kategorienamen im StringGrid
+  StringGrid1.Cells[COL_CATEGORY_NAMES, 0] := 'Gewinn';
+  StringGrid1.Cells[COL_ROUND1, 0] := 'Runde 1';
+  StringGrid1.Cells[COL_ROUND2, 0] := 'Runde 2';
+  StringGrid1.Cells[COL_ROUND3, 0] := 'Runde 3';
+
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_ONES] := 'nur 1';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_TWOS] := 'nur 2';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_THREES] := 'nur 3';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_FOURS] := 'nur 4';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_FIVES] := 'nur 5';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_SIXES] := 'nur 6';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_SUBTOTAL] := 'Zwischensumme';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_BONUS] := 'Bonus';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_THREE_OF_A_KIND] := 'Dreierpasch';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_FOUR_OF_A_KIND] := 'Viererpasch';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_FULL_HOUSE] := 'Full-House';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_SMALL_STRAIGHT] := 'Kleine Straße';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_LARGE_STRAIGHT] := 'Große Straße';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_KNIFFEL] := 'Kniffel';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_CHANCE] := 'Chance';
+  StringGrid1.Cells[COL_CATEGORY_NAMES, ROW_TOTAL] := 'Gesamt';
+
+  // WICHTIG: Entferne die Zeilen, die FDice auf 0 setzen und dann sofort die Bilder aktualisieren.
+  // Dies wird jetzt alles von StartNewTurn übernommen.
+  // for I := 1 to 5 do FDice[I] := 0; // DIESE ZEILE ENTFERNEN, OBSOLDET
+  // UpdateDiceImages;                 // DIESE ZEILE ENTFERNEN, OBSOLDET
+
+  StartNewTurn;
+  // Starte den ersten Zug (dies ruft Button1Click auf, der dann die Würfelwerte setzt und UpdateDiceImages korrekt aufruft)
+
+  CheckBox1.Checked:=false;
+  CheckBox2.Checked:=false;
+  CheckBox3.Checked:=false;
+  CheckBox4.Checked:=false;
+  CheckBox5.Checked:=false;
+end;
+
+procedure TForm2.StringGrid1DrawCell(Sender: TObject; ACol, ARow: LongInt;
+  Rect: TRect; State: TGridDrawState);
+var
+  CellText, DisplayText: string;
+begin
+  CellText := StringGrid1.Cells[ACol, ARow];
+
+  // Zeichenbereich vorbereiten
+  StringGrid1.Canvas.FillRect(Rect);
+
+  // Prüfen, ob Stern drin ist → kursiv und Stern aus dem sichtbaren Text entfernen
+  if Pos('*', CellText) > 0 then
+  begin
+    StringGrid1.Canvas.Font.Style := [fsItalic];
+    DisplayText := StringReplace(CellText, '*', '', [rfReplaceAll]);
+  end
+  else
+  begin
+    StringGrid1.Canvas.Font.Style := [];
+    DisplayText := CellText;
+  end;
+
+  // Optional: Schriftart und -größe setzen (dein bestehender Code)
+  StringGrid1.Canvas.Font.Name := 'Segoe UI';
+  StringGrid1.Canvas.Font.Size := 10;
+
+  // Text zentriert zeichnen
+  DrawText(StringGrid1.Canvas.Handle, PChar(DisplayText), -1, Rect,
+    DT_CENTER or DT_VCENTER or DT_SINGLELINE);
+end;
+
+procedure TForm2.Button1Click(Sender: TObject); // Würfeln
+var
+  i: Integer;
+  WurfWert: Integer;
+begin
+  if FAttemptsLeft > 0 then
+  begin
+    // Würfel rollen, die NICHT festgehalten sind
+    // Vereinfacht die Schleife
+
+    if not CheckBox1.Checked then
+      FDice[1] := Random(6) + 1;
+    if not CheckBox2.Checked then
+      FDice[2] := Random(6) + 1;
+    if not CheckBox3.Checked then
+      FDice[3] := Random(6) + 1;
+    if not CheckBox4.Checked then
+      FDice[4] := Random(6) + 1;
+    if not CheckBox5.Checked then
+      FDice[5] := Random(6) + 1;
+    UpdateDiceImages; // Würfelbilder aktualisieren
+
+    Dec(FAttemptsLeft); // Versuche reduzieren
+    Label3.Caption := Format('%d/3 Versuche', [FAttemptsLeft]);
+
+    // Mögliche Punktzahlen anzeigen
+    ClearPotentialScoresInRound(FCurrentRound); // Alte mögliche Scores löschen
+    CalculateAndDisplayPotentialScores; // Neue mögliche Scores berechnen
+
+    // Wenn keine Versuche mehr übrig sind, Würfel-Button deaktivieren
+    if FAttemptsLeft = 0 then
+      Button1.Enabled := False;
+  end;
+end;
+
+function TForm2.IsColumnFull(Col: Integer): Boolean;
+var
+  Row: Integer;
+begin
+  Result := True;
+  for Row := 1 to StringGrid1.RowCount - 1 do
+  begin
+    if (Row <> ROW_SUBTOTAL) and (Row <> ROW_BONUS) and (Row <> ROW_TOTAL) then
+    begin
+      if not FScoredCategories[Row, Col] then
+      begin
+        Result := False;
+        Exit;
+      end;
+    end;
+  end;
+end;
+
+procedure TForm2.Button2Click(Sender: TObject);
+// War vorher Button4Click (Übernehmen/Apply)
+var
+  SelectedCol, SelectedRow: Integer;
+  ScoreString: string;
+  ConfirmedScore: Integer;
+  TargetCol, R, C: Integer;
+
+begin
+   // Überprüft ob die Row voll ost
+   if IsColumnFull(TargetCol) then
+begin
+  if TargetCol < StringGrid1.ColCount - 1 then
+  begin
+    Inc(FCurrentRound); // nächste Runde
+    ShowMessage('Alle Kategorien dieser Runde wurden gewertet. Die nächste Runde beginnt.');
+  end
+  else
+  begin
+    ShowMessage('Alle Runden abgeschlossen.');
+  end;
+  end;
+
+
+  // Aktuell ausgewählte Zelle im Grid ermitteln
+  SelectedCol := StringGrid1.Col;
+  SelectedRow := StringGrid1.Row;
+  TargetCol := FCurrentRound; // Spalte der aktuellen Spielrunde
+
+  // Validierung:
+  // 1. Ist es die Spalte der aktuellen Runde?
+  if SelectedCol <> TargetCol then
+  begin
+    ShowMessage
+      ('Bitte wählen Sie eine Zelle in der Spalte der aktuellen Runde (' +
+      IntToStr(TargetCol) + ') aus.');
+    Exit;
+  end;
+
+  // 2. Ist es eine gültige Kategorie-Zeile (nicht Header, Zwischensumme, Bonus, Gesamt)?
+  if (SelectedRow <= 0) or (SelectedRow = ROW_SUBTOTAL) or
+    (SelectedRow = ROW_BONUS) or (SelectedRow = ROW_TOTAL) then
+  begin
+    ShowMessage('Bitte wählen Sie eine gültige Kategorie zur Wertung aus.');
+    Exit;
+  end;
+
+  // 3. Wurde diese Kategorie in dieser Runde bereits gewertet?
+  if FScoredCategories[SelectedRow, TargetCol] then
+  begin
+    ShowMessage('Diese Kategorie wurde in dieser Runde bereits gewertet.');
+    Exit;
+  end;
+
+  ScoreString := StringGrid1.Cells[SelectedCol, SelectedRow];
+
+  // 4. Beginnt der Zellinhalt mit '*' (ist es eine mögliche Punktzahl)?
+  if (Length(ScoreString) > 0) and (ScoreString[1] = '*') then
+  begin
+    // Punktzahl extrahieren (ohne '*')
+    if TryStrToInt(Copy(ScoreString, 2, Length(ScoreString) - 1), ConfirmedScore)
+    then
+    begin
+      // Punktzahl als feststehende (nicht kursive) Zahl im Grid speichern
+      StringGrid1.Cells[SelectedCol, SelectedRow] := IntToStr(ConfirmedScore);
+      FScoredCategories[SelectedRow, TargetCol] := True;
+      // Kategorie als gewertet markieren
+
+      // Alle anderen möglichen (kursiven) Punktzahlen in der aktuellen Runde löschen
+      ClearPotentialScoresInRound(TargetCol);
+
+      // Zwischensumme, Bonus und Gesamtpunktzahl aktualisieren
+      UpdateTotals;
+
+      StringGrid1.Invalidate; // Grid neu zeichnen lassen
+
+      // Prüfen, ob die Runde oder das Spiel beendet ist
+      CheckForEndOfRound; // Wichtig: Erst prüfen, ob Runde zu Ende
+
+      // Wenn das Spiel nach CheckForEndOfRound noch nicht beendet ist (d.h. FCurrentRound <= COL_ROUND3)
+      // und der Würfelbutton noch aktiv ist (oder sein sollte), dann starte einen neuen Zug.
+      // CheckForEndOfRound kann Button1.Enabled bereits auf False setzen, wenn das Spiel vorbei ist.
+      if Button1.Enabled then
+      // Oder eine explizitere Prüfung, ob das Spiel weitergeht
+      begin
+        StartNewTurn;
+      end;
+    end
+    else
+    begin
+      ShowMessage('Fehler beim Konvertieren der Punktzahl: ' + ScoreString);
+    end;
+  end
+  else if ScoreString = '' then
+  // Erlaube das Eintragen einer Null, wenn die Zelle leer ist (für freiwillige Nullen)
+  begin
+    if MessageDlg('Möchten Sie wirklich eine 0 für diese Kategorie eintragen?',
+      mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+    begin
+      StringGrid1.Cells[SelectedCol, SelectedRow] := '0';
+      FScoredCategories[SelectedRow, TargetCol] := True;
+      ClearPotentialScoresInRound(TargetCol);
+      UpdateTotals;
+      StringGrid1.Invalidate;
+      CheckForEndOfRound;
+      if Button1.Enabled then
+      begin
+        StartNewTurn;
+      end;
+    end;
+  end
+  else
+  begin
+    ShowMessage
+      ('Bitte wählen Sie eine mögliche Punktzahl (kursiv) aus oder eine leere Zelle, um eine 0 einzutragen.');
+  end;
+end;
+
+procedure TForm2.Button3Click(Sender: TObject); // Dein Statistik-Button
+const
+  NUMBER_OF_SIMULATIONS = 10000; // Define how many times you want to simulate
+begin
+  SimulateDiceRollsForStatistics(NUMBER_OF_SIMULATIONS);
+
+  // Erstelle eine Instanz von Form3, falls sie noch nicht existiert
+  if not Assigned(Form3) then
+    Form3 := TForm3.Create(Application);
+
+  // Übergib die aktuellen Würfelwerte an die UpdateStatistics-Methode von Form3
+  Form3.UpdateStatistics(FDice);
+
+  // Zeige das Statistik-Formular modal an
+  Form3.ShowModal;
+end;
+
+{ procedure TForm2.Button4Click(Sender: TObject); // Übernehmen
+  var
+  SelectedCol, SelectedRow: Integer;
+  ScoreString: string;
+  ConfirmedScore: Integer;
+  TargetCol: Integer;
+  begin
+  // Aktuell ausgewählte Zelle im Grid ermitteln
+  SelectedCol := StringGrid1.Col;
+  SelectedRow := StringGrid1.Row;
+  TargetCol := FCurrentRound;
+
+  // Validierung:
+  // 1. Ist es die Spalte der aktuellen Runde?
+  if SelectedCol <> TargetCol then
+  begin
+  ShowMessage('Bitte wählen Sie eine Zelle in der aktuellen Runde aus.');
+  Exit;
+  end;
+
+  // 2. Ist es eine gültige Kategorie-Zeile (nicht Header, Zwischensumme, Bonus, Gesamt)?
+  if (SelectedRow <= 0) or (SelectedRow = ROW_SUBTOTAL) or (SelectedRow = ROW_BONUS) or (SelectedRow = ROW_TOTAL) then
+  begin
+  ShowMessage('Bitte wählen Sie eine gültige Kategorie zur Wertung aus.');
+  Exit;
+  end;
+
+  // 3. Wurde diese Kategorie in dieser Runde bereits gewertet?
+  if FScoredCategories[SelectedRow, TargetCol] then
+  begin
+  ShowMessage('Diese Kategorie wurde in dieser Runde bereits gewertet.');
+  Exit;
+  end;
+
+  ScoreString := StringGrid1.Cells[SelectedCol, SelectedRow];
+
+  // 4. Beginnt der Zellinhalt mit '*' (ist es eine mögliche Punktzahl)?
+  if (Length(ScoreString) > 0) and (ScoreString[1] = '*') then
+  begin
+  // Punktzahl extrahieren (ohne '*')
+  ConfirmedScore := StrToInt(Copy(ScoreString, 2, Length(ScoreString) - 1));
+
+  // Punktzahl als feststehende (nicht kursive) Zahl im Grid speichern
+  StringGrid1.Cells[SelectedCol, SelectedRow] := IntToStr(ConfirmedScore);
+  FScoredCategories[SelectedRow, TargetCol] := True; // Kategorie als gewertet markieren
+
+  // Alle anderen möglichen (kursiven) Punktzahlen in der aktuellen Runde löschen
+  ClearPotentialScoresInRound(TargetCol);
+
+  // Zwischensumme, Bonus und Gesamtpunktzahl aktualisieren
+  UpdateTotals;
+
+  StringGrid1.Invalidate; // Grid neu zeichnen lassen
+
+  // Zug beenden und einen neuen starten
+  StartNewTurn;
+  CheckForEndOfRound; // Prüfen, ob die Runde beendet ist
+  end
+  else
+  begin
+  ShowMessage('Bitte wählen Sie eine mögliche Punktzahl (kursiv) aus, um sie zu übernehmen.');
+  end;
+  end;
+}
+procedure TForm2.Button5Click(Sender: TObject);
+// Für DFM-Button "Runde beenden"
+begin
+  // Prüfen, ob das Spiel überhaupt noch läuft
+  if FCurrentRound > COL_ROUND3 then
+  // COL_ROUND3 ist der Index der letzten Runde (z.B. 3)
+  begin
+    ShowMessage
+      ('Das Spiel ist bereits beendet. Bitte beenden Sie das Programm.');
+    Exit;
+  end;
+
+  if FAttemptsLeft > 0 then
+  begin
+
+    if MessageDlg
+      ('Möchten Sie den aktuellen Wurf verwerfen und einen komplett neuen Zug mit 3 Würfen starten?',
+      mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+    begin
+      // Lösche nur die *potenziellen* (kursiven) Scores aus der aktuellen Runde im Grid.
+      // Die fest eingetragenen Scores bleiben unberührt.
+      ClearPotentialScoresInRound(FCurrentRound);
+
+      // Starte einen komplett neuen Zug (setzt Würfel, Versuche, Checkboxen zurück und macht den ersten Wurf)
+      StartNewTurn;
+
+      // Hinweis: Es wird keine Kategorie zwangsweise genullt. Der Spieler kann
+      // nach dem neuen Zug wieder normal eine Kategorie auswählen.
+      // Die Bilder (ImageList1) und die festen Einträge im StringGrid1 bleiben erhalten.
+      // Die aktuellen Würfelbilder (Image1-Image5) werden durch StartNewTurn -> Button1Click aktualisiert.
+    end;
+  end
+  else begin
+    ShowMessage('Neuer Zug, neues Glück.');
+
+    // Lösche nur die *potenziellen* (kursiven) Scores aus der aktuellen Runde im Grid.
+    // Die fest eingetragenen Scores bleiben unberührt.
+    ClearPotentialScoresInRound(FCurrentRound);
+
+    // Starte einen komplett neuen Zug (setzt Würfel, Versuche, Checkboxen zurück und macht den ersten Wurf)
+    StartNewTurn;
+
+  end;
+end;
+
+procedure TForm2.Button4Click(Sender: TObject);
+// Für DFM-Button "Würfeln beenden"
+begin
+  if FAttemptsLeft > 0 then // Nur sinnvoll, wenn noch Würfe übrig SIND
+  begin
+    FAttemptsLeft := 0; // Keine weiteren Versuche für diesen Zug
+    Label3.Caption := Format('%d/3 Versuche', [FAttemptsLeft]);
+    Button1.Enabled := False; // Würfeln-Button deaktivieren
+    // Die potenziellen Punkte vom letzten Wurf bleiben im StringGrid angezeigt.
+    // Der Spieler muss nun Button2 (Übernehmen/Apply) verwenden.
+    ShowMessage
+      ('Würfeln für diesen Zug beendet. Bitte wählen Sie nun eine Kategorie zum Werten aus.');
+  end
+  else
+  begin
+    if not Button1.Enabled then // Bereits beendet oder keine Versuche mehr
+      ShowMessage
+        ('Das Würfeln wurde bereits beendet oder Sie haben keine Versuche mehr.')
+    else // Sollte nicht passieren, aber als Fallback
+      ShowMessage('Sie haben keine Würfelversuche mehr für diesen Zug.');
+  end;
+end;
+
+// --- Private Hilfsprozeduren und Funktionen ---
+
+procedure TForm2.UpdateDiceImages;
+var
+  i: Integer;
+  CurrentImage: TImage;
+  WurfWert: Integer;
+begin
+  for i := 1 to 5 do
+  begin
+    case i of
+      1:
+        CurrentImage := Image1;
+      2:
+        CurrentImage := Image2;
+      3:
+        CurrentImage := Image3;
+      4:
+        CurrentImage := Image4;
+      5:
+        CurrentImage := Image5;
+    end;
+
+    WurfWert := FDice[i]; // Würfelwert (1-6)
+    CurrentImage.Canvas.FillRect(Rect(0, 0, CurrentImage.Width,
+      CurrentImage.Height)); // Fülle den gesamten Bereich
+    // Wichtig: Range Check hier. ImageList Index ist 0-basiert.
+    // Also WurfWert muss zwischen 1 und 6 liegen, damit WurfWert - 1 zwischen 0 und 5 liegt.
+    if (WurfWert >= 1) and (WurfWert <= 6) then
+      ImageList1.Draw(CurrentImage.Canvas, 0, 0, WurfWert - 1)
+    else
+    begin
+
+    end;
+  end;
+end;
+
+procedure TForm2.ClearPotentialScoresInRound(ARoundCol: Integer);
+var
+  R: Integer;
+  CellContent: string;
+begin
+  for R := 1 to StringGrid1.RowCount - 1 do
+  // Gehe durch alle Zeilen außer dem Header
+  begin
+    // Nur löschen, wenn die Kategorie noch nicht fest gewertet wurde
+    // Und die Zeile keine Summen- oder Bonuszeile ist
+    if (not FScoredCategories[R, ARoundCol]) and (R <> ROW_SUBTOTAL) and
+      (R <> ROW_BONUS) and (R <> ROW_TOTAL) then
+    begin
+      CellContent := StringGrid1.Cells[ARoundCol, R];
+      // Prüfen, ob der Inhalt mit '*' beginnt (also eine mögliche Punktzahl ist)
+      if (Length(CellContent) > 0) and (CellContent[1] = '*') then
+      begin
+        StringGrid1.Cells[ARoundCol, R] := ''; // Inhalt löschen
+      end;
+    end;
+  end;
+  StringGrid1.Invalidate; // Grid neu zeichnen lassen
+end;
+
+procedure TForm2.CalculateAndDisplayPotentialScores;
+var
+  R: Integer;
+  CalculatedScore: Integer;
+  TargetCol: Integer;
+  DiceCounts: TDictionary<Integer, Integer>; // Wird jetzt hier erstellt
+begin
+  TargetCol := FCurrentRound; // Spalte der aktuellen Runde
+  DiceCounts := GetDiceCounts(FDice); // Zählungen einmalig abrufen
+
+  for R := ROW_ONES to ROW_CHANCE do
+  // Gehe durch alle Kategorien, die gewertet werden können
+  begin
+    // Nur wenn die Kategorie in dieser Runde noch nicht gewertet wurde
+    if not FScoredCategories[R, TargetCol] then
+    begin
+      CalculatedScore := CalculateScoreForCategory(R, FDice);
+      // Zeige die Punktzahl nur an, wenn sie nicht 0 ist (außer bei Chance, Full House etc.)
+      if (CalculatedScore > 0) or
+        ((R = ROW_FULL_HOUSE) and IsFullHouse(DiceCounts)) or // Angepasst
+        ((R = ROW_SMALL_STRAIGHT) and IsSmallStraight(FDice)) or
+        ((R = ROW_LARGE_STRAIGHT) and IsLargeStraight(FDice)) or
+        ((R = ROW_KNIFFEL) and HasNOfAKind(DiceCounts, 5)) or // Angepasst
+        (R = ROW_CHANCE) then
+      // Chance kann immer 0 sein, muss aber angezeigt werden
+      begin
+        StringGrid1.Cells[TargetCol, R] := '*' + IntToStr(CalculatedScore);
+      end
+      else
+      begin
+        StringGrid1.Cells[TargetCol, R] := '';
+        // Leere Zelle, wenn keine Punktzahl möglich
+      end;
+    end;
+  end;
+  StringGrid1.Invalidate;
+  // Grid neu zeichnen lassen, um Kursivschrift anzuwenden
+end;
+
+function TForm2.CalculateScoreForCategory(CategoryRow: Integer;
+  const ADice: array of Integer): Integer;
+var
+  i, sum: Integer;
+  DiceCounts: TDictionary<Integer, Integer>;
+begin
+  Result := 0;
+
+  DiceCounts := GetDiceCounts(ADice);
+
+  case CategoryRow of
+    ROW_ONES:
+      if DiceCounts.ContainsKey(1) then
+        Result := DiceCounts.Items[1] * 1;
+    ROW_TWOS:
+      if DiceCounts.ContainsKey(2) then
+        Result := DiceCounts.Items[2] * 2;
+    ROW_THREES:
+      if DiceCounts.ContainsKey(3) then
+        Result := DiceCounts.Items[3] * 3;
+    ROW_FOURS:
+      if DiceCounts.ContainsKey(4) then
+        Result := DiceCounts.Items[4] * 4;
+    ROW_FIVES:
+      if DiceCounts.ContainsKey(5) then
+        Result := DiceCounts.Items[5] * 5;
+    ROW_SIXES:
+      if DiceCounts.ContainsKey(6) then
+        Result := DiceCounts.Items[6] * 6;
+
+    ROW_THREE_OF_A_KIND:
+      begin
+        if HasNOfAKind(DiceCounts, 3) then
+        begin
+          sum := 0;
+          // HIER DIE ÄNDERUNG: Low(ADice) bis High(ADice)
+          for i := Low(ADice) to High(ADice) do
+            sum := sum + ADice[i];
+          Result := sum;
+        end;
+      end;
+    ROW_FOUR_OF_A_KIND:
+      begin
+        if HasNOfAKind(DiceCounts, 4) then
+        begin
+          sum := 0;
+          // HIER DIE ÄNDERUNG: Low(ADice) bis High(ADice)
+          for i := Low(ADice) to High(ADice) do
+            sum := sum + ADice[i];
+          Result := sum;
+        end;
+      end;
+    ROW_FULL_HOUSE:
+      begin
+        if IsFullHouse(DiceCounts) then
+          Result := 25;
+      end;
+    ROW_SMALL_STRAIGHT:
+      begin
+        if IsSmallStraight(ADice) then
+          Result := 30;
+      end;
+    ROW_LARGE_STRAIGHT:
+      begin
+        if IsLargeStraight(ADice) then
+          Result := 40;
+      end;
+    ROW_KNIFFEL:
+      begin
+        if HasNOfAKind(DiceCounts, 5) then
+          Result := 50;
+      end;
+    ROW_CHANCE:
+      begin
+        sum := 0;
+        // HIER DIE ÄNDERUNG: Low(ADice) bis High(ADice)
+        for i := Low(ADice) to High(ADice) do
+          sum := sum + ADice[i];
+        Result := sum;
+      end;
+  end;
+end;
+
+procedure TForm2.UpdateTotals;
+var
+  R: Integer;
+  SubtotalUpperSection: Integer;
+  BonusPoints: Integer;
+  TotalScore: Integer;
+  CurrentCol: Integer;
+  CellVal: Integer;
+begin
+  CurrentCol := FCurrentRound;
+
+  // Zwischensumme der oberen Sektion berechnen
+  SubtotalUpperSection := 0;
+  for R := ROW_ONES to ROW_SIXES do
+  begin
+    // Nur addieren, wenn die Kategorie gewertet wurde und der Wert ein Integer ist
+    if FScoredCategories[R, CurrentCol] then
+    begin
+      // Versuche, den Wert zu konvertieren, um Fehler bei leeren Zellen zu vermeiden
+      if TryStrToInt(StringGrid1.Cells[CurrentCol, R], CellVal) then
+        SubtotalUpperSection := SubtotalUpperSection + CellVal;
+    end;
+  end;
+  StringGrid1.Cells[CurrentCol, ROW_SUBTOTAL] := IntToStr(SubtotalUpperSection);
+
+  // Bonus berechnen
+  BonusPoints := 0;
+  if SubtotalUpperSection >= 63 then // Standard-Kniffel-Bonus-Schwelle
+    BonusPoints := 35;
+  StringGrid1.Cells[CurrentCol, ROW_BONUS] := IntToStr(BonusPoints);
+
+  // Gesamtpunktzahl berechnen
+  TotalScore := SubtotalUpperSection + BonusPoints;
+  // Addiere die Punkte aus der unteren Sektion
+  for R := ROW_THREE_OF_A_KIND to ROW_CHANCE do
+  begin
+    if FScoredCategories[R, CurrentCol] then
+    begin
+      // Versuche, den Wert zu konvertieren, um Fehler bei leeren Zellen zu vermeiden
+      if TryStrToInt(StringGrid1.Cells[CurrentCol, R], CellVal) then
+        TotalScore := TotalScore + CellVal;
+    end;
+  end;
+  StringGrid1.Cells[CurrentCol, ROW_TOTAL] := IntToStr(TotalScore);
+
+  StringGrid1.Invalidate; // Grid neu zeichnen lassen
+end;
+
+procedure TForm2.StartNewTurn;
+var
+  i: Integer;
+begin
+  FAttemptsLeft := 3; // 3 neue Versuche
+  Label3.Caption := Format('%d/3 Versuche', [FAttemptsLeft]);
+  Button1.Enabled := True; // Würfel-Button aktivieren
+
+  // Checkboxen zum Festhalten der Würfel zurücksetzen
+  CheckBox1.Checked := False;
+  CheckBox2.Checked := False;
+  CheckBox3.Checked := False;
+  CheckBox4.Checked := False;
+  CheckBox5.Checked := False;
+
+  // Setze FDice auf 0, damit alle Würfel neu gewürfelt werden können
+  // (Dies ist okay HIER, da der Button1Click sofort danach die Werte überschreibt)
+  for i := 1 to 5 do
+    FDice[i] := 0;
+
+  // Würfel rollen (simuliert den ersten Klick auf Button1)
+  // Dies wird die FDice-Werte auf 1-6 setzen und DANACH UpdateDiceImages aufrufen.
+  Button1Click(Button1);
+
+  // ClearPotentialScoresInRound wird bereits durch Button1Click aufgerufen
+  // ClearPotentialScoresInRound(FCurrentRound); // Diese Zeile ist jetzt redundant
+end;
+
+procedure TForm2.CheckForEndOfRound;
+var
+  R: Integer;
+  AllCategoriesScoredInCurrentRound: Boolean;
+begin
+  AllCategoriesScoredInCurrentRound := True;
+  for R := ROW_ONES to ROW_CHANCE do // Gehe durch alle wertbaren Kategorien
+  begin
+    if not FScoredCategories[R, FCurrentRound] then
+    begin
+      AllCategoriesScoredInCurrentRound := False;
+      Break; // Eine Kategorie ist noch nicht gewertet, Runde ist nicht vorbei
+    end;
+  end;
+
+  if AllCategoriesScoredInCurrentRound then
+  begin
+    ShowMessage(Format('Runde %d beendet!', [FCurrentRound]));
+    // Zur nächsten Runde wechseln
+    Inc(FCurrentRound);
+    if FCurrentRound > COL_ROUND3 then
+    // Wenn alle Runden gespielt wurden (COL_ROUND3 ist der Index der letzten Runde)
+    begin
+      ShowMessage('Spiel beendet! Endstand: ' + StringGrid1.Cells[COL_ROUND1,
+        ROW_TOTAL] + ', ' + StringGrid1.Cells[COL_ROUND2, ROW_TOTAL] + ', ' +
+        StringGrid1.Cells[COL_ROUND3, ROW_TOTAL]);
+      Button1.Enabled := False; // Würfeln deaktivieren
+      Button4.Enabled := False; // Übernehmen deaktivieren
+      // Hier könntest du weitere Logik für den Spielabschluss hinzufügen
+    end
+    else
+    begin
+      ShowMessage(Format('Starte Runde %d', [FCurrentRound]));
+      StartNewTurn; // Starte einen neuen Zug für die nächste Runde
+    end;
+  end;
+end;
+
+
+// --- Hilfsfunktionen für die Würfelanalyse ---
+
+function TForm2.GetDiceCounts(const ADice: array of Integer)
+  : TDictionary<Integer, Integer>;
+var
+  i: Integer;
+begin
+  Result := TDictionary<Integer, Integer>.Create;
+  // Erstelle ein neues Dictionary
+  // Zähle die Häufigkeit jeder Würfelzahl
+  // Die Schleife muss von Low(ADice) bis High(ADice) gehen.
+  // Bei Open Array Parametern ist Low(ADice) immer 0.
+  // High(ADice) ist die Anzahl der Elemente minus 1.
+  for i := Low(ADice) to High(ADice) do // So ist es korrekt für Open Arrays
+  begin
+    // Hier ist der Wert, der im Würfel ist (1-6), nicht der Index des Würfels.
+    // Die Prüfung auf Wert >=1 und <=6 ist hier sinnvoll, um "0"er Werte zu vermeiden,
+    // falls FDice noch nicht gewürfelte 0en enthält.
+    if (ADice[i] >= 1) and (ADice[i] <= 6) then
+    begin
+      if Result.ContainsKey(ADice[i]) then
+        Result.Items[ADice[i]] := Result.Items[ADice[i]] + 1
+      else
+        Result.Add(ADice[i], 1);
+    end;
+  end;
+end;
+
+function TForm2.HasNOfAKind(const ADiceCounts: TDictionary<Integer, Integer>;
+  N: Integer): Boolean;
+var
+  Value: Integer;
+begin
+  Result := False;
+  for Value in ADiceCounts.Values do // Iteriere über die Zählungen
+  begin
+    if Value >= N then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
+function TForm2.IsSmallStraight(const ADice: array of Integer): Boolean;
+var
+  i: Integer;
+  UniqueDice: TList<Integer>;
+  SortedUniqueDice: TArray<Integer>;
+begin
+  Result := False;
+  UniqueDice := TList<Integer>.Create;
+  try
+    // Füge eindeutige Würfelwerte hinzu
+    // HIER ÄNDERN: Von Low(ADice) bis High(ADice) iterieren
+    for i := Low(ADice) to High(ADice) do
+    begin
+      // Zusätzlich Absicherung gegen 0-Werte, falls diese doch mal vorkommen.
+      // Eindeutige Werte sollten im Bereich 1-6 liegen.
+      if (ADice[i] >= 1) and (ADice[i] <= 6) then
+      begin
+        if UniqueDice.IndexOf(ADice[i]) = -1 then // Prüfe auf Duplikate
+          UniqueDice.Add(ADice[i]);
+      end;
+    end;
+
+    // Sortiere die eindeutigen Würfelwerte
+    UniqueDice.Sort;
+
+    // Konvertiere TList zu dynamischem Array für einfachere Handhabung
+    SetLength(SortedUniqueDice, UniqueDice.Count);
+    for i := 0 to UniqueDice.Count - 1 do
+      SortedUniqueDice[i] := UniqueDice[i];
+
+    // Prüfe auf kleine Straße (mindestens 4 aufeinanderfolgende Zahlen)
+    // Mögliche Sequenzen: 1-2-3-4, 2-3-4-5, 3-4-5-6
+    if Length(SortedUniqueDice) >= 4 then
+    begin
+      for i := 0 to Length(SortedUniqueDice) - 4 do
+      begin
+        if (SortedUniqueDice[i + 1] = SortedUniqueDice[i] + 1) and
+          (SortedUniqueDice[i + 2] = SortedUniqueDice[i] + 2) and
+          (SortedUniqueDice[i + 3] = SortedUniqueDice[i] + 3) then
+        begin
+          Result := True;
+          Exit;
+        end;
+      end;
+    end;
+  finally
+    UniqueDice.Free;
+  end;
+end;
+
+function TForm2.IsLargeStraight(const ADice: array of Integer): Boolean;
+var
+  i: Integer;
+  UniqueDice: TList<Integer>;
+  SortedUniqueDice: TArray<Integer>;
+begin
+  Result := False;
+  UniqueDice := TList<Integer>.Create;
+  try
+    // HIER ÄNDERN: Von Low(ADice) bis High(ADice) iterieren
+    for i := Low(ADice) to High(ADice) do
+    begin
+      // Zusätzlich Absicherung gegen 0-Werte
+      if (ADice[i] >= 1) and (ADice[i] <= 6) then
+      begin
+        if UniqueDice.IndexOf(ADice[i]) = -1 then
+          UniqueDice.Add(ADice[i]);
+      end;
+    end;
+
+    UniqueDice.Sort;
+
+    SetLength(SortedUniqueDice, UniqueDice.Count);
+    for i := 0 to UniqueDice.Count - 1 do
+      SortedUniqueDice[i] := UniqueDice[i];
+
+    // Für große Straße müssen es genau 5 eindeutige, aufeinanderfolgende Zahlen sein
+    if Length(SortedUniqueDice) = 5 then
+    begin
+      // 1-2-3-4-5 oder 2-3-4-5-6
+      if ((SortedUniqueDice[0] = 1) and (SortedUniqueDice[1] = 2) and
+        (SortedUniqueDice[2] = 3) and (SortedUniqueDice[3] = 4) and
+        (SortedUniqueDice[4] = 5)) or
+        ((SortedUniqueDice[0] = 2) and (SortedUniqueDice[1] = 3) and
+        (SortedUniqueDice[2] = 4) and (SortedUniqueDice[3] = 5) and
+        (SortedUniqueDice[4] = 6)) then
+      begin
+        Result := True;
+      end;
+    end;
+  finally
+    UniqueDice.Free;
+  end;
+end;
+
+function TForm2.IsFullHouse(const ADiceCounts: TDictionary<Integer, Integer>)
+  : Boolean; // Parameter angepasst
+var
+  HasThree: Boolean;
+  HasPair: Boolean;
+  Value: Integer;
+begin
+  Result := False;
+  HasThree := False;
+  HasPair := False;
+
+  for Value in ADiceCounts.Values do // Iteriere über die Zählungen
+  begin
+    if Value = 3 then
+      HasThree := True;
+    if Value = 2 then
+      HasPair := True;
+  end;
+
+  Result := HasThree and HasPair;
+end;
+
+end.
